@@ -9,28 +9,38 @@ public class MainMenuController : MonoBehaviour
     [Header("UI")]
     [SerializeField] TMP_InputField rowsInput;
     [SerializeField] TMP_InputField colsInput;
+    [SerializeField] TMP_InputField cols2Input;
     [SerializeField] Button practiceButton;
     [SerializeField] Button testButton;
     [SerializeField] Button quitButton;
     [SerializeField] GameObject loadingScreen;
-    [SerializeField] RectTransform loadingBar;
+    [SerializeField] Slider loadingBar;
 
     [Header("Config")]
     [SerializeField] private string praticeSceneName;
     [SerializeField] private string testSceneName;
 
     [Header("Loading Settings")]
+    //[SerializeField]
     [SerializeField] private float targetWidth = 1753f;
     [SerializeField] private float loadDuration = 1.2f;
 
     private const int MinSize = 2;
     private const int MaxSize = 6;
+
+    private const int Min2Size = 5;
+    private const int Max2Size = 15;
+
     private const int DefaultRows = 2;
     private const int DefaultCols = 2;
+
+    private const int Default2Cols = 5;
 
     // PlayerPrefs keys
     public const string RowsKey = "Rows";
     public const string ColsKey = "Cols";
+    public const string Cols2Key = "Cols2";
+
 
     private void Awake()
     {
@@ -38,11 +48,16 @@ public class MainMenuController : MonoBehaviour
         int rows = Mathf.Clamp(PlayerPrefs.GetInt(RowsKey, DefaultRows), MinSize, MaxSize);
         int cols = Mathf.Clamp(PlayerPrefs.GetInt(ColsKey, DefaultCols), MinSize, MaxSize);
 
+        int cols2 = Mathf.Clamp(PlayerPrefs.GetInt(Cols2Key, Default2Cols), Min2Size, Max2Size);
+
         rowsInput.text = rows.ToString();
         colsInput.text = cols.ToString();
 
+        cols2Input.text = cols2.ToString();
+
         rowsInput.onEndEdit.AddListener(s => rowsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
         colsInput.onEndEdit.AddListener(s => colsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
+        cols2Input.onEndEdit.AddListener(s => cols2Input.text = ClampToRange(s, Min2Size, Max2Size).ToString());
 
         practiceButton.onClick.AddListener(OnPraticeClicked);
         testButton.onClick.AddListener(OnTestClicked);
@@ -58,17 +73,17 @@ public class MainMenuController : MonoBehaviour
         PlayerPrefs.SetInt(RowsKey, rows);
         PlayerPrefs.SetInt(ColsKey, cols);
         PlayerPrefs.Save();
-
-        //SceneManager.LoadScene(praticeSceneName);
-        
+                
         StartCoroutine(FillLoadingAndLoadScene(praticeSceneName));
     }
 
     private void OnTestClicked()
     {
-        //SceneManager.LoadScene(testSceneName);
+        int cols = ClampToRange(cols2Input.text, Min2Size, Max2Size);
+        PlayerPrefs.SetInt(Cols2Key, cols);
+        PlayerPrefs.Save();
 
-        //StartCoroutine(FillLoadingAndLoadScene(testSceneName));
+        StartCoroutine(FillLoadingAndLoadScene(testSceneName));
     }
 
     private void OnQuitClicked()
@@ -95,7 +110,7 @@ public class MainMenuController : MonoBehaviour
     {
         practiceButton.interactable = testButton.interactable = false;
         if (loadingScreen != null) loadingScreen.SetActive(true);
-        if (loadingBar != null) loadingBar.sizeDelta = new Vector2(0f, loadingBar.sizeDelta.y);
+        loadingBar.value = 0;
 
         var async = SceneManager.LoadSceneAsync(sceneName);
         async.allowSceneActivation = false;
@@ -104,7 +119,7 @@ public class MainMenuController : MonoBehaviour
         while (t < 1f)
         {
             t += Time.unscaledDeltaTime / Mathf.Max(0.001f, loadDuration);
-            if (loadingBar != null) loadingBar.sizeDelta = new Vector2(Mathf.Lerp(0f, targetWidth, t), loadingBar.sizeDelta.y);
+            loadingBar.value = (Mathf.Lerp(0f, 1, t));
             yield return null;
         }
 

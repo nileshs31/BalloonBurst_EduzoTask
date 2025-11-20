@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Nilesh/Scenes/PracticeScene.unity
     guid: e03645d8c37eace4eb34d42fa6c11f6f
+  - enabled: 1
+    path: Assets/Nilesh/Scenes/TestScene.unity
+    guid: c31cf8b9a5f31d54cb5df5b631e6e093
   m_configObjects: {}

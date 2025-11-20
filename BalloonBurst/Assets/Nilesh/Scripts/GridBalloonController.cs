@@ -5,18 +5,20 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-public enum BalloonColor { Green, Red, Pink, Purple}
+public enum BalloonColor { Green, Red, Pink, Purple, Blue}
 
 public class GridBalloonController : MonoBehaviour
 {
     [Header("PFX")]
     [SerializeField] GameObject pfxGreen;
-    [SerializeField] GameObject pfxRed, pfxPink, pfxPurple;
+    [SerializeField] GameObject pfxRed, pfxPink, pfxPurple, pfxBlue;
     [Header("UI")]
     [SerializeField] GameObject imageObject;
     [SerializeField] Sprite[] sprites;
     [SerializeField] public Image spriteImage;
     [SerializeField] TextMeshProUGUI number;
+    [SerializeField] AudioSource audioSource;
+    [SerializeField] AudioClip pop, missed;
     BalloonColor balloonColor;
     GameObject currentPfx; 
     
@@ -64,6 +66,11 @@ public class GridBalloonController : MonoBehaviour
                 number.color = new Color(0.6f, 0.3f, 0.9f);
                 currentPfx = pfxPurple;
                 break;
+            case 4:
+                balloonColor = BalloonColor.Blue;
+                number.color = Color.blue;
+                currentPfx = pfxBlue;
+                break;
             default:
                 break;
         }
@@ -87,10 +94,15 @@ public class GridBalloonController : MonoBehaviour
     {
         yield return new WaitForSeconds(1.5f);
         number.gameObject.SetActive(false);
-        currentPfx.SetActive(false);
+        currentPfx.SetActive(false); 
+        if (TestGameManager.Instance != null)
+        {
+            StartFloating(cachedStartX, cachedBottomY, cachedTopY);
+        }
         SetBalloonColor();
         yield return new WaitForSeconds(0.25f);
         GetComponent<Button>().interactable = true;
+        
     }
     void AnimateNumberPop()
     {
@@ -126,10 +138,13 @@ public class GridBalloonController : MonoBehaviour
         else
         {
             TestGameManager.Instance.CountUpdater();
-            StopAllCoroutines();
-            //StartCoroutine(WaitThenFlyAgain());
-            //handle testscene here later
+            StopAllTweensAndDisable();
+            StartCoroutine(WaitThenActiveAgain());
+
+            //StartFloating(cachedStartX, cachedBottomY, cachedTopY);
         }
+        audioSource.clip = pop;
+        audioSource.Play(); 
 
     }
 
@@ -141,7 +156,6 @@ public class GridBalloonController : MonoBehaviour
 
         if (rt == null) rt = GetComponent<RectTransform>();
 
-        gameObject.SetActive(true);
         rt.anchoredPosition = new Vector2(spawnX, bottomY);
         rt.localScale = Vector3.one;
 
@@ -158,15 +172,19 @@ public class GridBalloonController : MonoBehaviour
                             .SetEase(Ease.InOutSine)
                             .SetLoops(-1, LoopType.Yoyo);
 
-        // Vertical rise to top;
+        // Vertical rise to top
         verticalTween = rt.DOAnchorPosY(topY, riseDuration)
-                          .SetEase(Ease.OutSine)
+                          .SetEase(Ease.Linear)
                           .OnComplete(() =>
                           {
-                              Debug.Log($"{name} reached top at x={rt.anchoredPosition.x:F1}, y={rt.anchoredPosition.y:F1}");
-                              // stop horizontal movement and recycle
-                              horizontalTween?.Kill();
-                              //OnReachedTop();
+                              StopAllTweensAndDisable();
+                              if (TestGameManager.Instance != null)
+                              {
+                                  TestGameManager.Instance.BalloonMissed();
+                                  audioSource.clip = missed;
+                                  audioSource.Play();
+                                  StartFloating(cachedStartX, cachedBottomY, cachedTopY);
+                              }
                           });
     }
 
@@ -183,6 +201,13 @@ public class GridBalloonController : MonoBehaviour
         cb.disabledColor = a0;
 
         return cb;
+    }
+
+    public void StopAllTweensAndDisable()
+    {
+        rt.DOKill();
+        horizontalTween?.Kill();
+        verticalTween?.Kill();
     }
 
 }
