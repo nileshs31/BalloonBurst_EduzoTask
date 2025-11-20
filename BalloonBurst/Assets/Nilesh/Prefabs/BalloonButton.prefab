@@ -176,6 +176,12 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 4af42de789e32dd4ca02558f6aa30bef, type: 3}
   spriteImage: {fileID: 448588908930328833}
   number: {fileID: 6060479277284982020}
+  minRiseDuration: 12
+  maxRiseDuration: 25
+  minRespawnDelay: 0.6
+  maxRespawnDelay: 1.8
+  horizontalAmplitude: 75
+  horizontalPeriod: 2
 --- !u!82 &616729775791753972
 AudioSource:
   m_ObjectHideFlags: 0
