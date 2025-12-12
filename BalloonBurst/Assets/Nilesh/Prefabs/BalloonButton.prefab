@@ -181,7 +181,7 @@ MonoBehaviour:
   number: {fileID: 6060479277284982020}
   audioSource: {fileID: 616729775791753972}
   pop: {fileID: 8300000, guid: 2886a7a82d98cbc479228f3baebccec0, type: 3}
-  missed: {fileID: 8300000, guid: 7f4a52c7a541f964aa47e7f0fbd6d915, type: 3}
+  missed: {fileID: 8300000, guid: 73acb889e0197ce408580c69b0c8c7eb, type: 3}
   minRiseDuration: 5
   maxRiseDuration: 18
   minRespawnDelay: 0.6
