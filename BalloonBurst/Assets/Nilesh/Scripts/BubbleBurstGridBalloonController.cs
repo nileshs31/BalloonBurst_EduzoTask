@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 
 
-namespace Eduzo.Games.GameName
+namespace Eduzo.Games.BalloonBurst
 {
 
     public enum BalloonColor { Green, Red, Pink, Purple, Blue}
@@ -41,6 +41,8 @@ namespace Eduzo.Games.GameName
         private float cachedStartX, cachedBottomY, cachedTopY;
         private Tween horizontalTween;
         private Tween verticalTween;
+        
+
         private void Awake()
         {
 
@@ -54,27 +56,27 @@ namespace Eduzo.Games.GameName
             {
                 case 0:
                     balloonColor = BalloonColor.Green;
-                    number.color = Color.green;
+                    //number.color = Color.green;
                     currentPfx = pfxGreen;
                     break;
                 case 1:
                     balloonColor = BalloonColor.Red;
-                    number.color = Color.red;
+                    //number.color = Color.red;
                     currentPfx = pfxRed;
                     break;
                 case 2:
                     balloonColor = BalloonColor.Pink;
-                    number.color = new Color(1f, 0.4f, 0.7f);
+                    //number.color = new Color(1f, 0.4f, 0.7f);
                     currentPfx = pfxPink;
                     break;
                 case 3:
                     balloonColor = BalloonColor.Purple;
-                    number.color = new Color(0.6f, 0.3f, 0.9f);
+                    //number.color = new Color(0.6f, 0.3f, 0.9f);
                     currentPfx = pfxPurple;
                     break;
                 case 4:
                     balloonColor = BalloonColor.Blue;
-                    number.color = Color.blue;
+                    //number.color = Color.blue;
                     currentPfx = pfxBlue;
                     break;
                 default:
@@ -136,16 +138,22 @@ namespace Eduzo.Games.GameName
             if (BubbleBurstPracticeModeGameManager.Instance != null)
             {
                 BubbleBurstPracticeModeGameManager.Instance.ScoreUpdater();
+
+                BubbleBurstPracticeModeGameManager.Instance.OnBalloonPopped();
+
                 number.text = "" + BubbleBurstPracticeModeGameManager.Instance.Score;
-                AnimateNumberPop();
+                number.gameObject.SetActive(true);
+                //AnimateNumberPop();
                 StopAllCoroutines();
-                StartCoroutine(WaitThenActiveAgain());
+                //StartCoroutine(WaitThenActiveAgain());
             }
             else
             {
                 BubbleBurstTestModeGameManager.Instance.CountUpdater();
+                BubbleBurstTestModeGameManager.Instance.SpawnPopText(transform.position);
                 StopAllTweensAndDisable();
-                StartCoroutine(WaitThenActiveAgain());
+                if(BubbleBurstTestModeGameManager.Instance.testRunning)
+                    StartCoroutine(WaitThenActiveAgain());
 
                 //StartFloating(cachedStartX, cachedBottomY, cachedTopY);
             }

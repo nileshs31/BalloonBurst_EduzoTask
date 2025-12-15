@@ -5,7 +5,7 @@ using TMPro;
 using System.Collections;
 
 
-namespace Eduzo.Games.GameName
+namespace Eduzo.Games.BalloonBurst
 {
     public class BubbleBurstMainMenuController : MonoBehaviour
     {
@@ -28,38 +28,36 @@ namespace Eduzo.Games.GameName
         [SerializeField] private float targetWidth = 1753f;
         [SerializeField] private float loadDuration = 1.2f;
 
-        private const int MinSize = 2;
-        private const int MaxSize = 6;
+        private const int MinSize = 4;
+        private const int MaxSize = 36;
 
         private const int Min2Size = 5;
-        private const int Max2Size = 15;
+        private const int Max2Size = 22;
 
         private const int DefaultRows = 2;
-        private const int DefaultCols = 2;
+        
+        //private const int DefaultCols = 2;
 
         private const int Default2Cols = 5;
 
-        // PlayerPrefs keys
-        public const string RowsKey = "Rows";
-        public const string ColsKey = "Cols";
-        public const string Cols2Key = "Cols2";
+        //"PracticeNumberOfBalloons"
+        //"TestNumberOfBalloons"
 
 
         private void Awake()
         {
 
-            int rows = Mathf.Clamp(PlayerPrefs.GetInt(RowsKey, DefaultRows), MinSize, MaxSize);
-            int cols = Mathf.Clamp(PlayerPrefs.GetInt(ColsKey, DefaultCols), MinSize, MaxSize);
+            int rows = Mathf.Clamp(PlayerPrefs.GetInt("PracticeNumberOfBalloons", DefaultRows), MinSize, MaxSize);
+            //int cols = Mathf.Clamp(PlayerPrefs.GetInt(ColsKey, DefaultCols), MinSize, MaxSize);
 
-            int cols2 = Mathf.Clamp(PlayerPrefs.GetInt(Cols2Key, Default2Cols), Min2Size, Max2Size);
+            int cols2 = Mathf.Clamp(PlayerPrefs.GetInt("TestNumberOfBalloons", Default2Cols), Min2Size, Max2Size);
 
             rowsInput.text = rows.ToString();
-            colsInput.text = cols.ToString();
 
             cols2Input.text = cols2.ToString();
 
             rowsInput.onEndEdit.AddListener(s => rowsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
-            colsInput.onEndEdit.AddListener(s => colsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
+            //colsInput.onEndEdit.AddListener(s => colsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
             cols2Input.onEndEdit.AddListener(s => cols2Input.text = ClampToRange(s, Min2Size, Max2Size).ToString());
 
             practiceButton.onClick.AddListener(OnPraticeClicked);
@@ -71,10 +69,9 @@ namespace Eduzo.Games.GameName
         private void OnPraticeClicked()
         {
             int rows = ClampToRange(rowsInput.text, MinSize, MaxSize);
-            int cols = ClampToRange(colsInput.text, MinSize, MaxSize);
+           // int cols = ClampToRange(colsInput.text, MinSize, MaxSize);
 
-            PlayerPrefs.SetInt(RowsKey, rows);
-            PlayerPrefs.SetInt(ColsKey, cols);
+            PlayerPrefs.SetInt("PracticeNumberOfBalloons", rows);
             PlayerPrefs.Save();
 
             StartCoroutine(FillLoadingAndLoadScene(praticeSceneName));
@@ -83,7 +80,7 @@ namespace Eduzo.Games.GameName
         private void OnTestClicked()
         {
             int cols = ClampToRange(cols2Input.text, Min2Size, Max2Size);
-            PlayerPrefs.SetInt(Cols2Key, cols);
+            PlayerPrefs.SetInt("TestNumberOfBalloons", cols);
             PlayerPrefs.Save();
 
             StartCoroutine(FillLoadingAndLoadScene(testSceneName));

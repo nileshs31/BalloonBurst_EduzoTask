@@ -8,8 +8,17 @@ using UnityEngine.UI;
 
 
 
-namespace Eduzo.Games.GameName
+namespace Eduzo.Games.BalloonBurst
 {
+    public class BubbleBurstTestResult
+    {
+        public int questionAsked;          // target tail bubbles
+        public int userResponse;       // user response = bubbles burst
+        public int score;           // percentage score
+        public bool isCorrect;          // tailCount == bubblesBurst
+        public float timeSpentSeconds; // testDuration - timeLeft
+    }
+
     public class BubbleBurstTestModeGameManager : MonoBehaviour
     {
         [Header("References")]
@@ -51,8 +60,8 @@ namespace Eduzo.Games.GameName
         [SerializeField] private Transform caterpillarContainer;
         [SerializeField] private Sprite[] tailSpriteVariants;
         [SerializeField] private int minTailCount = 12;
-        [SerializeField] private int maxTailCount = 20;
-        [SerializeField] private float tailSpacing = 24f;
+        [SerializeField] private int maxTailCount = 20; //22
+        [SerializeField] private float tailSpacing = 35f;
         [SerializeField] private float tailPopPunch = 0.28f;
 
 
@@ -73,8 +82,7 @@ namespace Eduzo.Games.GameName
         public int MissCount { get; private set; } = 0;
         private int lives;
         private float timeLeft;
-        private bool testRunning = false;
-        public const string Cols2Key = "Cols2";
+        public bool testRunning = false;
 
         public static BubbleBurstTestModeGameManager Instance;
 
@@ -88,13 +96,15 @@ namespace Eduzo.Games.GameName
         [SerializeField] private float targetWidth = 1753f;
         [SerializeField] private float loadDuration = 1.2f;
 
+        [SerializeField] private GameObject popTextPrefab;
+
         void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
 
-            spawnCount = PlayerPrefs.GetInt(Cols2Key);
-
+            spawnCount = Random.Range(5,8);
+            targetTailCount = PlayerPrefs.GetInt("TestNumberOfBalloons", 5);
             homeButton.onClick.AddListener(OnHomeClicked);
             homeButton2.onClick.AddListener(OnHomeClicked);
             restartButton.onClick.AddListener(OnRestartClicked);
@@ -132,8 +142,12 @@ namespace Eduzo.Games.GameName
                 yield return null;
                 timeLeft -= Time.deltaTime;
             }
-            testRunning = false;
-            EndTest();
+
+            if (timeLeft <= 0f && testRunning)
+            {
+                testRunning = false;
+                EndTest();
+            }
         }
 
         private void UpdateLivesUI()
@@ -237,7 +251,35 @@ namespace Eduzo.Games.GameName
         public void CountUpdater()
         {
             BurstCount++;
-            PopCaterpillarTail();
+
+            if(BurstCount == targetTailCount)
+            {
+                testRunning = false;
+                EndTest();
+            }
+            //PopCaterpillarTail();
+        }
+
+        public void SpawnPopText(Vector3 worldPosition)
+        {
+            GameObject go = Instantiate(popTextPrefab, spawnParent, false);
+            RectTransform rt = go.GetComponent<RectTransform>();
+
+            Vector2 localPos;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                spawnParent,
+                RectTransformUtility.WorldToScreenPoint(null, worldPosition),
+                null,
+                out localPos
+            );
+
+            rt.anchoredPosition = localPos;
+
+            TextMeshProUGUI tmp = go.GetComponentInChildren<TextMeshProUGUI>();
+            if (tmp != null)
+            {
+                tmp.text = BurstCount.ToString();
+            }
         }
 
         public void BalloonMissed()
@@ -265,6 +307,7 @@ namespace Eduzo.Games.GameName
         private void EndTest()
         {
             testRunning = false;
+            SaveTestResults(); // saving the testResults here
             UpdateLivesUI();
 
             int acc = GetAccuracyPercent();
@@ -298,6 +341,45 @@ namespace Eduzo.Games.GameName
                 b.StopAllCoroutines();
                 b.StopAllTweensAndDisable();
             }
+        }
+
+        public void SaveTestResults()
+        {
+            BubbleBurstTestResult result = new BubbleBurstTestResult
+            {
+                questionAsked = targetTailCount,
+                userResponse = BurstCount,
+                score = GetAccuracyPercent(),
+                isCorrect = (BurstCount == targetTailCount),
+                timeSpentSeconds = testDuration - timeLeft
+            };
+
+            string json = JsonUtility.ToJson(result);
+            PlayerPrefs.SetString("LastTestResult", json);
+            PlayerPrefs.Save();
+
+            Debug.Log("Test Result Saved: " + json);
+        }
+
+        [ContextMenu("View Last Test Result")]
+        public void ViewTestResults()
+        {
+            if (PlayerPrefs.HasKey("LastTestResult"))
+            {
+                string json = PlayerPrefs.GetString("LastTestResult");
+                BubbleBurstTestResult result =
+                    JsonUtility.FromJson<BubbleBurstTestResult>(json);
+
+                Debug.Log($"Question Asked: {result.questionAsked}, User Response: {result.userResponse}, Score: {result.score}%, Is Correct: {result.isCorrect}, Time Spent in Seconds: {result.timeSpentSeconds}");
+            }
+        }
+
+        [ContextMenu("Clear Last Test Result")]
+        public void ClearTestResults()
+        {
+            PlayerPrefs.DeleteKey("LastTestResult");
+            PlayerPrefs.Save();
+            Debug.Log("Last test result cleared.");
         }
 
         void OnHomeClicked()
@@ -342,7 +424,7 @@ namespace Eduzo.Games.GameName
             if (caterpillarContainer == null || tailImagePrefab == null)
                 return;
 
-            targetTailCount = Random.Range(minTailCount, maxTailCount + 1);
+            //targetTailCount = Random.Range(minTailCount, maxTailCount + 1);
 
             RectTransform prefabRT = tailImagePrefab.GetComponent<RectTransform>();
             float baseWidth = (prefabRT != null && !Mathf.Approximately(prefabRT.rect.width, 0f))

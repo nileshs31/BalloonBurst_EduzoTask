@@ -435,7 +435,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -75, y: -100}
+  m_AnchoredPosition: {x: -190, y: -100}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &317521088
@@ -1067,7 +1067,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 291.4, y: -49.999}
+  m_AnchoredPosition: {x: 291.40002, y: -49.999}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &552092725
@@ -1555,7 +1555,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 778a34c403b47fc4ea8e8e63589313f6, type: 3}
   minTailCount: 12
   maxTailCount: 20
-  tailSpacing: 45
+  tailSpacing: 50
   tailPopPunch: 0.28
   winPanel: {fileID: 849584608}
   losePanel: {fileID: 556197200}
@@ -1573,6 +1573,7 @@ MonoBehaviour:
   loadingBar: {fileID: 816200682}
   targetWidth: 1753
   loadDuration: 1.2
+  popTextPrefab: {fileID: 3768170001540394517, guid: b8ce112c2f26e014fb4b8c8ef8625458, type: 3}
 --- !u!1 &669697800
 GameObject:
   m_ObjectHideFlags: 0
@@ -2727,7 +2728,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 75, y: -100}
+  m_AnchoredPosition: {x: 190, y: -100}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1291718245
@@ -4148,7 +4149,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 187.4, y: -49.999996}
+  m_AnchoredPosition: {x: 187.40002, y: -49.999996}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1920979277
