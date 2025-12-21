@@ -1,8 +1,9 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-using TMPro;
 using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 
 namespace Eduzo.Games.BalloonBurst
@@ -10,12 +11,10 @@ namespace Eduzo.Games.BalloonBurst
     public class BubbleBurstMainMenuController : MonoBehaviour
     {
         [Header("UI")]
-        [SerializeField] TMP_InputField rowsInput;
-        [SerializeField] TMP_InputField colsInput;
-        [SerializeField] TMP_InputField cols2Input;
         [SerializeField] Button practiceButton;
         [SerializeField] Button testButton;
         [SerializeField] Button quitButton;
+        [SerializeField] Button addInputField;
         [SerializeField] GameObject loadingScreen;
         [SerializeField] Slider loadingBar;
 
@@ -24,68 +23,93 @@ namespace Eduzo.Games.BalloonBurst
         [SerializeField] private string testSceneName;
 
         [Header("Loading Settings")]
-        //[SerializeField]
         [SerializeField] private float targetWidth = 1753f;
         [SerializeField] private float loadDuration = 1.2f;
 
         private const int MinSize = 4;
         private const int MaxSize = 36;
 
-        private const int Min2Size = 5;
-        private const int Max2Size = 22;
+        [Header("Number of Balloons Settings")]
+        [SerializeField] private Transform inputParent;
+        [SerializeField] private TMP_InputField inputPrefab;
 
-        private const int DefaultRows = 2;
-        
-        //private const int DefaultCols = 2;
-
-        private const int Default2Cols = 5;
-
-        //"PracticeNumberOfBalloons"
-        //"TestNumberOfBalloons"
-
+        [System.Serializable]
+        public class BalloonRoundList
+        {
+            public List<int> balloonCounts = new List<int>();
+        }
 
         private void Awake()
         {
-
-            int rows = Mathf.Clamp(PlayerPrefs.GetInt("PracticeNumberOfBalloons", DefaultRows), MinSize, MaxSize);
-            //int cols = Mathf.Clamp(PlayerPrefs.GetInt(ColsKey, DefaultCols), MinSize, MaxSize);
-
-            int cols2 = Mathf.Clamp(PlayerPrefs.GetInt("TestNumberOfBalloons", Default2Cols), Min2Size, Max2Size);
-
-            rowsInput.text = rows.ToString();
-
-            cols2Input.text = cols2.ToString();
-
-            rowsInput.onEndEdit.AddListener(s => rowsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
-            //colsInput.onEndEdit.AddListener(s => colsInput.text = ClampToRange(s, MinSize, MaxSize).ToString());
-            cols2Input.onEndEdit.AddListener(s => cols2Input.text = ClampToRange(s, Min2Size, Max2Size).ToString());
-
             practiceButton.onClick.AddListener(OnPraticeClicked);
             testButton.onClick.AddListener(OnTestClicked);
-            quitButton.onClick.AddListener(OnQuitClicked);
-
+            quitButton.onClick.AddListener(OnQuitClicked); 
+            addInputField.onClick.AddListener(AddNewInputField);
+            inputPrefab.onEndEdit.AddListener(
+                s => inputPrefab.text = ClampToRange(s, MinSize, MaxSize).ToString()
+            );
         }
+        private void AddNewInputField()
+        {
+            TMP_InputField newInput = Instantiate(inputPrefab, inputParent);
+            newInput.text = MinSize.ToString();
 
+            newInput.onEndEdit.AddListener(
+                s => newInput.text = ClampToRange(s, MinSize, MaxSize).ToString()
+            );
+
+            addInputField.transform.SetAsLastSibling();
+        }
+        public static void SaveBalloonRounds(List<int> values)
+        {
+            BalloonRoundList data = new BalloonRoundList
+            {
+                balloonCounts = values
+            };
+
+            string json = JsonUtility.ToJson(data);
+            PlayerPrefs.SetString("BalloonRounds", json);
+            PlayerPrefs.Save();
+        }
+        private List<int> CollectBalloonRounds()
+        {
+            List<int> rounds = new List<int>();
+
+            foreach (TMP_InputField input in inputParent.GetComponentsInChildren<TMP_InputField>())
+            {
+                int value = ClampToRange(input.text, MinSize, MaxSize);
+                rounds.Add(value);
+            }
+
+            return rounds;
+        }
         private void OnPraticeClicked()
         {
-            int rows = ClampToRange(rowsInput.text, MinSize, MaxSize);
-           // int cols = ClampToRange(colsInput.text, MinSize, MaxSize);
-
-            PlayerPrefs.SetInt("PracticeNumberOfBalloons", rows);
-            PlayerPrefs.Save();
+            List<int> rounds = CollectBalloonRounds();
+            DebugLogRounds(rounds);
+            SaveBalloonRounds(rounds);
 
             StartCoroutine(FillLoadingAndLoadScene(praticeSceneName));
         }
 
         private void OnTestClicked()
         {
-            int cols = ClampToRange(cols2Input.text, Min2Size, Max2Size);
-            PlayerPrefs.SetInt("TestNumberOfBalloons", cols);
-            PlayerPrefs.Save();
+            List<int> rounds = CollectBalloonRounds();
+            DebugLogRounds(rounds);
+            SaveBalloonRounds(rounds);
 
             StartCoroutine(FillLoadingAndLoadScene(testSceneName));
         }
-
+        private void DebugLogRounds(List<int> rounds)
+        {
+            string log = "Balloon Rounds: ";
+            for (int i = 0; i < rounds.Count; i++)
+            {
+                log += rounds[i];
+                if (i < rounds.Count - 1) log += ", ";
+            }
+            Debug.Log(log);
+        }
         private void OnQuitClicked()
         {
             Application.Quit();

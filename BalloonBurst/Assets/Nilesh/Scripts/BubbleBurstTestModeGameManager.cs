@@ -10,6 +10,7 @@ using UnityEngine.UI;
 
 namespace Eduzo.Games.BalloonBurst
 {
+    [System.Serializable]
     public class BubbleBurstTestResult
     {
         public int questionAsked;          // target tail bubbles
@@ -18,6 +19,17 @@ namespace Eduzo.Games.BalloonBurst
         public bool isCorrect;          // tailCount == bubblesBurst
         public float timeSpentSeconds; // testDuration - timeLeft
     }
+
+    [System.Serializable]
+    public class BubbleBurstTestSessionResult
+    {
+        public List<BubbleBurstTestResult> rounds = new List<BubbleBurstTestResult>();
+
+        public int totalQuestions;   // sum of all targetTailCount
+        public int totalResponses;   // sum of all BurstCount
+        public float accuracy;       // derived at end
+    }
+
 
     public class BubbleBurstTestModeGameManager : MonoBehaviour
     {
@@ -98,16 +110,51 @@ namespace Eduzo.Games.BalloonBurst
 
         [SerializeField] private GameObject popTextPrefab;
 
+        private List<int> testRounds = new List<int>();
+        private int currentRoundIndex = 0;
+
+        public CanvasGroup blackScreen;
+
+        private BubbleBurstTestSessionResult currentSessionResult;
+        private bool roundResultSaved = false;
+
         void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
 
-            spawnCount = Random.Range(5,8);
-            targetTailCount = PlayerPrefs.GetInt("TestNumberOfBalloons", 5);
+            if (blackScreen != null)
+            {
+                blackScreen.alpha = 0f;
+                blackScreen.gameObject.SetActive(false);
+            }
+            LoadRounds();
+            targetTailCount = testRounds[currentRoundIndex];
             homeButton.onClick.AddListener(OnHomeClicked);
             homeButton2.onClick.AddListener(OnHomeClicked);
             restartButton.onClick.AddListener(OnRestartClicked);
+            currentSessionResult = new BubbleBurstTestSessionResult();
+
+        }
+        private void LoadRounds()
+        {
+            testRounds.Clear();
+
+            if (PlayerPrefs.HasKey("BalloonRounds"))
+            {
+                string json = PlayerPrefs.GetString("BalloonRounds");
+                BubbleBurstMainMenuController.BalloonRoundList data =
+                    JsonUtility.FromJson<BubbleBurstMainMenuController.BalloonRoundList>(json);
+
+                if (data != null && data.balloonCounts.Count > 0)
+                    testRounds.AddRange(data.balloonCounts);
+            }
+
+            // Safety fallback
+            if (testRounds.Count == 0)
+                testRounds.Add(5);
+
+            currentRoundIndex = 0;
         }
 
         private void Start()
@@ -117,8 +164,11 @@ namespace Eduzo.Games.BalloonBurst
 
         public void StartTest()
         {
+            spawnCount = Random.Range(5, 8);
             BurstCount = 0;
             MissCount = 0;
+            roundResultSaved = false;
+            targetTailCount = testRounds[currentRoundIndex];
 
             if (hearts != null && hearts.Length > 0)
                 lives = Mathf.Min(startingLives, hearts.Length);
@@ -310,9 +360,31 @@ namespace Eduzo.Games.BalloonBurst
             SaveTestResults(); // saving the testResults here
             UpdateLivesUI();
 
-            int acc = GetAccuracyPercent();
-            int score = BurstCount;
+            var all = FindObjectsOfType<BubbleBurstGridBalloonController>();
+            foreach (var b in all)
+            {
+                b.StopAllCoroutines();
+                b.StopAllTweensAndDisable();
+            }
 
+            bool hasNextRound = currentRoundIndex < testRounds.Count - 1;
+
+            if (hasNextRound)
+            {
+                StartCoroutine(RoundTransition());
+            }
+            else
+            {
+                ShowFinalGameOver();
+            }
+
+        }
+        private void ShowFinalGameOver()
+        {
+            FinalizeSessionResults();
+
+            int acc = Mathf.RoundToInt(currentSessionResult.accuracy);
+            int score = currentSessionResult.totalResponses;
             bool isWin = acc >= oneStarThreshold;
 
             winPanel.SetActive(false);
@@ -335,16 +407,73 @@ namespace Eduzo.Games.BalloonBurst
 
             UpdateStarsByPercent(acc);
 
-            var all = FindObjectsOfType<BubbleBurstGridBalloonController>();
-            foreach (var b in all)
-            {
-                b.StopAllCoroutines();
-                b.StopAllTweensAndDisable();
-            }
+            string json = JsonUtility.ToJson(currentSessionResult);
+            PlayerPrefs.SetString("LastTestSessionResult", json);
+            PlayerPrefs.Save();
         }
+        /*private IEnumerator LoadNextRound()
+        {
+            // optional fade / delay
+            yield return new WaitForSeconds(0.8f);
+
+            currentRoundIndex++;
+
+            // cleanup
+            foreach (var b in FindObjectsOfType<BubbleBurstGridBalloonController>())
+                Destroy(b.gameObject);
+
+            foreach (var t in caterpillarTails)
+                if (t) Destroy(t.gameObject);
+            caterpillarTails.Clear();
+
+            StartTest();
+        }*/
+
+        private IEnumerator RoundTransition()
+        {
+            if (blackScreen != null)
+            {
+                blackScreen.gameObject.SetActive(true);
+                blackScreen.alpha = 0f;
+
+                yield return blackScreen
+                    .DOFade(1f, 0.35f)
+                    .SetEase(Ease.OutQuad)
+                    .WaitForCompletion();
+
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            currentRoundIndex++;
+
+            foreach (var b in FindObjectsOfType<BubbleBurstGridBalloonController>())
+                Destroy(b.gameObject);
+
+            foreach (var t in caterpillarTails)
+                if (t) Destroy(t.gameObject);
+            caterpillarTails.Clear();
+
+            if (blackScreen != null)
+            {
+                yield return blackScreen
+                    .DOFade(0f, 0.5f)
+                    .SetEase(Ease.InQuad)
+                    .WaitForCompletion();
+
+                blackScreen.gameObject.SetActive(false);
+            }
+
+            StartTest();
+        }
+
 
         public void SaveTestResults()
         {
+            if (roundResultSaved)
+                return;
+
+            roundResultSaved = true;
+
             BubbleBurstTestResult result = new BubbleBurstTestResult
             {
                 questionAsked = targetTailCount,
@@ -354,25 +483,64 @@ namespace Eduzo.Games.BalloonBurst
                 timeSpentSeconds = testDuration - timeLeft
             };
 
-            string json = JsonUtility.ToJson(result);
-            PlayerPrefs.SetString("LastTestResult", json);
-            PlayerPrefs.Save();
+            currentSessionResult.rounds.Add(result);
 
-            Debug.Log("Test Result Saved: " + json);
+            Debug.Log($"Saved round {currentSessionResult.rounds.Count} | Asked {targetTailCount}");
         }
 
-        [ContextMenu("View Last Test Result")]
+
+        private void FinalizeSessionResults()
+        {
+            int totalAsked = 0;
+            int totalPopped = 0;
+
+            foreach (var r in currentSessionResult.rounds)
+            {
+                totalAsked += r.questionAsked;
+                totalPopped += r.userResponse;
+            }
+
+            currentSessionResult.totalQuestions = totalAsked;
+            currentSessionResult.totalResponses = totalPopped;
+
+            if (totalAsked > 0)
+                currentSessionResult.accuracy = (float)totalPopped / totalAsked * 100f;
+            else
+                currentSessionResult.accuracy = 0f;
+        }
+
+        [ContextMenu("View Last Test Session Result")]
         public void ViewTestResults()
         {
-            if (PlayerPrefs.HasKey("LastTestResult"))
+            if (!PlayerPrefs.HasKey("LastTestSessionResult"))
             {
-                string json = PlayerPrefs.GetString("LastTestResult");
-                BubbleBurstTestResult result =
-                    JsonUtility.FromJson<BubbleBurstTestResult>(json);
+                Debug.Log("No session result found.");
+                return;
+            }
 
-                Debug.Log($"Question Asked: {result.questionAsked}, User Response: {result.userResponse}, Score: {result.score}%, Is Correct: {result.isCorrect}, Time Spent in Seconds: {result.timeSpentSeconds}");
+            string json = PlayerPrefs.GetString("LastTestSessionResult");
+            BubbleBurstTestSessionResult session =
+                JsonUtility.FromJson<BubbleBurstTestSessionResult>(json);
+
+            Debug.Log($"SESSION RESULT\n" +
+                      $"Rounds Played: {session.rounds.Count}\n" +
+                      $"Total Asked: {session.totalQuestions}\n" +
+                      $"Total Popped: {session.totalResponses}\n" +
+                      $"Accuracy: {session.accuracy:0.##}%");
+
+            for (int i = 0; i < session.rounds.Count; i++)
+            {
+                var r = session.rounds[i];
+                Debug.Log(
+                    $"Round {i + 1} | Asked: {r.questionAsked}, " +
+                    $"Popped: {r.userResponse}, " +
+                    $"Acc: {r.score}%, " +
+                    $"Correct: {r.isCorrect}, " +
+                    $"Time: {r.timeSpentSeconds:0.0}s"
+                );
             }
         }
+
 
         [ContextMenu("Clear Last Test Result")]
         public void ClearTestResults()
