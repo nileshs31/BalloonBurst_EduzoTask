@@ -118,6 +118,8 @@ namespace Eduzo.Games.BalloonBurst
         private BubbleBurstTestSessionResult currentSessionResult;
         private bool roundResultSaved = false;
 
+        public float delay;
+        public bool skipSequentialDelay = false;
         void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -241,45 +243,36 @@ namespace Eduzo.Games.BalloonBurst
         private void SpawnBalloonsFirstTime()
         {
             if (spawnParent == null || BalloonButtonPrefab == null ||
-            TopYCheck == null || BottomYCheck == null || LeftXCheck == null || RightXCheck == null)
+                TopYCheck == null || BottomYCheck == null || LeftXCheck == null || RightXCheck == null)
             {
-                Debug.LogError("Spawn setup incomplete - assign spawnParent, prefab, and the four checks.");
+                Debug.LogError("Spawn setup incomplete");
                 return;
             }
 
             Canvas.ForceUpdateCanvases();
 
-            Vector3 topWorld = TopYCheck.position;
-            Vector3 bottomWorld = BottomYCheck.position;
-            Vector3 leftWorld = LeftXCheck.position;
-            Vector3 rightWorld = RightXCheck.position;
-
-            Vector3 topLocal = spawnParent.InverseTransformPoint(topWorld);
-            Vector3 bottomLocal = spawnParent.InverseTransformPoint(bottomWorld);
-            Vector3 leftLocal = spawnParent.InverseTransformPoint(leftWorld);
-            Vector3 rightLocal = spawnParent.InverseTransformPoint(rightWorld);
-
+            Vector3 topLocal = spawnParent.InverseTransformPoint(TopYCheck.position);
+            Vector3 bottomLocal = spawnParent.InverseTransformPoint(BottomYCheck.position);
+            Vector3 leftLocal = spawnParent.InverseTransformPoint(LeftXCheck.position);
+            Vector3 rightLocal = spawnParent.InverseTransformPoint(RightXCheck.position);
 
             float minX = Mathf.Min(leftLocal.x, rightLocal.x);
             float maxX = Mathf.Max(leftLocal.x, rightLocal.x);
-
             if (maxX <= minX) maxX = minX + 1f;
 
             float[] xs = new float[spawnCount];
-            if (spawnCount == 1)
-            {
-                xs[0] = (minX + maxX) * 0.5f;
-            }
-            else
-            {
-                float step = (maxX - minX) / (spawnCount - 1);
-                for (int i = 0; i < spawnCount; i++) xs[i] = minX + step * i;
-            }
+            float step = spawnCount == 1 ? 0 : (maxX - minX) / (spawnCount - 1);
+
+            for (int i = 0; i < spawnCount; i++)
+                xs[i] = minX + step * i;
+
+            // Spawn all balloons but DO NOT start floating
+            List<BubbleBurstGridBalloonController> balloons =
+                new List<BubbleBurstGridBalloonController>();
 
             for (int i = 0; i < spawnCount; i++)
             {
-                float spawnX = xs[i] + Random.Range(-25, 25);
-                spawnX = Mathf.Clamp(spawnX, minX, maxX);
+                float spawnX = Mathf.Clamp(xs[i] + Random.Range(-25, 25), minX, maxX);
 
                 var balloon = Instantiate(BalloonButtonPrefab, spawnParent, false);
                 balloon.gameObject.SetActive(true);
@@ -288,21 +281,71 @@ namespace Eduzo.Games.BalloonBurst
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.localScale = Vector3.one;
-                if (Mathf.Approximately(rt.rect.width, 0f) || Mathf.Approximately(rt.rect.height, 0f))
-                    rt.sizeDelta = new Vector2(200f, 210f);
-
-                rt.localPosition = new Vector3(spawnX, bottomLocal.y, rt.localPosition.z);
+                rt.sizeDelta = new Vector2(200f, 210f);
+                rt.localPosition = new Vector3(spawnX, bottomLocal.y, 0);
 
                 balloon.SetBalloonColor(isTest: true);
-                balloon.StartFloating(spawnX, bottomLocal.y, topLocal.y);
+
+                balloons.Add(balloon);
+            }
+
+            // Start floating sequentially
+            StartCoroutine(StartBalloonsSequentially(
+                balloons,
+                bottomLocal.y,
+                topLocal.y
+            ));
+        }
+
+        private IEnumerator StartBalloonsSequentially(
+    List<BubbleBurstGridBalloonController> balloons,
+    float bottomY,
+    float topY)
+        {
+            // Shuffle once
+            for (int i = 0; i < balloons.Count; i++)
+            {
+                int r = Random.Range(i, balloons.Count);
+                (balloons[i], balloons[r]) = (balloons[r], balloons[i]);
+            }
+
+            delay = 0f;
+
+            foreach (var balloon in balloons)
+            {
+                float t = 0f;
+                skipSequentialDelay = false;
+
+                while (t < delay)
+                {
+                    if (skipSequentialDelay)
+                        break;
+
+                    t += Time.deltaTime;
+                    yield return null;
+                }
+
+                if (!testRunning || balloon == null)
+                    yield break;
+
+                balloon.StartFloating(
+                    balloon.transform.localPosition.x,
+                    bottomY,
+                    topY
+                );
+
+                delay = balloon.riseDuration * 0.45f;
             }
         }
+
+
+
 
         public void CountUpdater()
         {
             BurstCount++;
-
-            if(BurstCount == targetTailCount)
+            skipSequentialDelay = true;
+            if (BurstCount == targetTailCount)
             {
                 testRunning = false;
                 EndTest();

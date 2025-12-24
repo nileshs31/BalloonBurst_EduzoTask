@@ -35,7 +35,7 @@ namespace Eduzo.Games.BalloonBurst
         [SerializeField] private float maxRespawnDelay = 1.8f;
         [SerializeField] private float horizontalAmplitude = 18f;   // how far left/right it waves
         [SerializeField] private float horizontalPeriod = 1.4f;     // how fast the waviness is
-
+        public float riseDuration;
 
         private RectTransform rt;
         private float cachedStartX, cachedBottomY, cachedTopY;
@@ -105,7 +105,9 @@ namespace Eduzo.Games.BalloonBurst
             currentPfx.SetActive(false);
             if (BubbleBurstTestModeGameManager.Instance != null)
             {
-                StartFloating(cachedStartX, cachedBottomY, cachedTopY);
+                rt.anchoredPosition = new Vector2(cachedStartX, cachedBottomY);
+                StartCoroutine(StartfloatingAgain());
+                //StartFloating(cachedStartX, cachedBottomY, cachedTopY);
             }
             SetBalloonColor();
             yield return new WaitForSeconds(0.25f);
@@ -178,7 +180,7 @@ namespace Eduzo.Games.BalloonBurst
             verticalTween?.Kill();
 
             // Random durations
-            float riseDuration = Random.Range(minRiseDuration, maxRiseDuration);
+            riseDuration = Random.Range(minRiseDuration, maxRiseDuration);
             float horizTarget = spawnX + Random.Range(-horizontalAmplitude, horizontalAmplitude);
 
             // Horizontal wobble
@@ -197,9 +199,16 @@ namespace Eduzo.Games.BalloonBurst
                                       BubbleBurstTestModeGameManager.Instance.BalloonMissed();
                                       audioSource.clip = missed;
                                       audioSource.Play();
-                                      StartFloating(cachedStartX, cachedBottomY, cachedTopY);
+                                      //StartFloating(cachedStartX, cachedBottomY, cachedTopY);
+                                      StartCoroutine(StartfloatingAgain());
                                   }
                               });
+        }
+
+        public IEnumerator StartfloatingAgain()
+        {
+            yield return new WaitForSeconds(BubbleBurstTestModeGameManager.Instance.delay + Random.Range(1.5f, 2f));
+            StartFloating(cachedStartX, cachedBottomY, cachedTopY);
         }
 
         //color helper - nilesh
